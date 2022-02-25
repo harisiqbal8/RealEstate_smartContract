@@ -7,6 +7,7 @@ contract RealEstate {
     uint256 property_no = 1;
     uint256 commission;
     uint256 fee;
+    address agency;
 
     struct Property {
         string current_pictures;
@@ -17,12 +18,14 @@ contract RealEstate {
         uint purchase_amount;
         address _owner;
         bool on_sale;
+        bool agency_approval;
     }
 
     // constructor
     constructor(uint commission_, uint fee_) {
         commission = commission_;
         fee = fee_;
+        agency = msg.sender;
     }
 
     // mapping
@@ -35,10 +38,11 @@ contract RealEstate {
         returns (
             uint256,
             uint256,
-            uint256
+            uint256,
+            address
         )
     {
-        return (property_no, commission, fee);
+        return (property_no, commission, fee, agency);
     }
 
     // Readable function for property data
@@ -53,6 +57,7 @@ contract RealEstate {
             string memory,
             uint,
             address,
+            bool,
             bool
         )
     {
@@ -65,7 +70,8 @@ contract RealEstate {
             pn.purchase_date,
             pn.purchase_amount,
             pn._owner,
-            pn.on_sale
+            pn.on_sale,
+            pn.agency_approval
         );
     }
 
@@ -85,15 +91,29 @@ contract RealEstate {
             _date,
             msg.value,
             msg.sender,
+            false,
             false
         );
     property_no++;
     }
 
+    // Modiifer
+    modifier Agent {
+        require(msg.sender == agency, "The Change can only be made by the Agency");
+        _;
+    }
+
+    // Agency Approval
+    function OnlyAgency(bool _sale, uint my_property) public Agent {
+        Property storage pn = propertyData[my_property];
+        pn.agency_approval = _sale;
+    }
+
     // Change Sale States
     function Sale(string memory _pics, uint _amount, bool _sale, uint my_property) public {
         Property storage pn = propertyData[my_property];
-        require(msg.sender == pn._owner, "The Change can only be done by the Owner");
+        require(pn.agency_approval == true, "You need to have Agency approval to sell this Token");
+        require(msg.sender == pn._owner, "The Change can only be made by the Owner");
         pn.current_pictures = _pics;
         pn.purchase_amount = _amount*(10**18);
         pn.on_sale = _sale;
@@ -109,6 +129,7 @@ contract RealEstate {
         pn.purchase_amount = msg.value;
         pn._owner = msg.sender;
         pn.on_sale = false;
+        pn.agency_approval = false;
     }
 
     
